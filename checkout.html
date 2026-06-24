@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0, viewport-fit=cover"
+  />
+  <meta name="theme-color" content="#2b1810" />
+  <title>Secure Checkout — Ember &amp; Oak</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap"
+    rel="stylesheet"
+  />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body class="checkout-body">
+  <!-- ============ Checkout header ============ -->
+  <header class="co-header">
+    <a class="co-back" href="index.html" aria-label="Back to store">
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M15 18l-6-6 6-6" />
+      </svg>
+    </a>
+    <div class="brand">
+      <span class="brand-mark">✦</span>
+      <span class="brand-name">Ember &amp; Oak</span>
+    </div>
+    <span class="co-secure" aria-label="Secure checkout">
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M6 10V8a6 6 0 0 1 12 0v2" />
+        <rect x="4" y="10" width="16" height="10" rx="2" />
+      </svg>
+      Secure
+    </span>
+  </header>
+
+  <main class="co-main">
+    <h1 class="co-title">Checkout</h1>
+
+    <!-- Order summary -->
+    <section class="co-card" aria-label="Order summary">
+      <h2 class="co-card__title">Order summary</h2>
+      <div class="co-items" id="coItems">
+        <!-- populated by checkout.js -->
+      </div>
+      <dl class="co-totals">
+        <div><dt>Subtotal</dt><dd id="coSubtotal">$0.00</dd></div>
+        <div><dt>Shipping</dt><dd id="coShipping">$6.00</dd></div>
+        <div><dt>Tax</dt><dd id="coTax">$0.00</dd></div>
+        <div class="co-totals__grand">
+          <dt>Total</dt><dd id="coTotal">$0.00</dd>
+        </div>
+      </dl>
+    </section>
+
+    <!-- Payment form -->
+    <form class="co-card co-form" id="coForm" novalidate>
+      <h2 class="co-card__title">Payment details</h2>
+
+      <label class="co-field">
+        <span>Email</span>
+        <input
+          type="email"
+          name="email"
+          inputmode="email"
+          autocomplete="email"
+          placeholder="you@example.com"
+          required
+        />
+      </label>
+
+      <label class="co-field">
+        <span>Card number</span>
+        <input
+          type="text"
+          name="card"
+          id="coCard"
+          inputmode="numeric"
+          autocomplete="cc-number"
+          placeholder="1234 5678 9012 3456"
+          maxlength="19"
+          required
+        />
+      </label>
+
+      <div class="co-row">
+        <label class="co-field">
+          <span>Expiry</span>
+          <input
+            type="text"
+            name="exp"
+            id="coExp"
+            inputmode="numeric"
+            autocomplete="cc-exp"
+            placeholder="MM / YY"
+            maxlength="7"
+            required
+          />
+        </label>
+        <label class="co-field">
+          <span>CVC</span>
+          <input
+            type="text"
+            name="cvc"
+            inputmode="numeric"
+            autocomplete="cc-csc"
+            placeholder="123"
+            maxlength="4"
+            required
+          />
+        </label>
+      </div>
+
+      <label class="co-field">
+        <span>Name on card</span>
+        <input
+          type="text"
+          name="name"
+          autocomplete="cc-name"
+          placeholder="Jane Aficionado"
+          required
+        />
+      </label>
+
+      <label class="co-field">
+        <span>ZIP / Postal code</span>
+        <input
+          type="text"
+          name="zip"
+          inputmode="numeric"
+          autocomplete="postal-code"
+          placeholder="10001"
+          required
+        />
+      </label>
+
+      <button type="submit" class="co-pay" id="coPay">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M6 10V8a6 6 0 0 1 12 0v2" />
+          <rect x="4" y="10" width="16" height="10" rx="2" />
+        </svg>
+        <span id="coPayLabel">Pay $0.00</span>
+      </button>
+      <p class="co-disclaimer">
+        🔒 Demo only — do not enter real card details. No payment is processed.
+      </p>
+    </form>
+
+    <!-- Success state (hidden until paid) -->
+    <section class="co-success" id="coSuccess" hidden>
+      <div class="co-success__check" aria-hidden="true">✓</div>
+      <h2>Payment successful</h2>
+      <p>
+        Thank you for your order. A confirmation has been sent to your email.
+        Your cigars are on the way. 🥃
+      </p>
+      <a class="co-success__btn" href="index.html">Back to store</a>
+    </section>
+
+    <p class="co-help">
+      Need help? Tap the chat icon to ask our assistant anytime.
+    </p>
+  </main>
+
+  <!-- ============ Chat launcher (FAB) ============ -->
+  <button
+    class="chat-fab"
+    id="chatFab"
+    aria-label="Open chat with the Ember AI assistant"
+    aria-haspopup="dialog"
+    aria-expanded="false"
+  >
+    <svg class="chat-fab__icon" viewBox="0 0 24 24" aria-hidden="true">
+      <path
+        d="M12 3C6.99 3 3 6.58 3 11c0 2.05.86 3.92 2.29 5.36-.1 1.17-.5 2.7-1.27 3.85-.13.2 0 .47.24.46 1.94-.07 3.6-.69 4.84-1.43A11.6 11.6 0 0 0 12 19c5.01 0 9-3.58 9-8s-3.99-8-9-8Z"
+      />
+    </svg>
+    <span class="chat-fab__badge" id="fabBadge" hidden>1</span>
+  </button>
+
+  <!-- ============ Chat widget ============ -->
+  <section
+    class="chat-widget"
+    id="chatWidget"
+    role="dialog"
+    aria-modal="true"
+    aria-label="Chat with the Ember AI assistant"
+    aria-hidden="true"
+  >
+    <div class="chat-header">
+      <div class="chat-header__avatar" aria-hidden="true">✦</div>
+      <div class="chat-header__info">
+        <h2 class="chat-header__name">Ember Assistant</h2>
+        <p class="chat-header__status">
+          <span class="status-dot"></span> AI Assistant · online
+        </p>
+      </div>
+      <button
+        class="chat-header__close"
+        id="chatNew"
+        aria-label="Start a new chat"
+        title="New chat"
+      >
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M12 20h9" />
+          <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z" />
+        </svg>
+      </button>
+      <button class="chat-header__close" id="chatClose" aria-label="Close chat">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M6 6l12 12M18 6L6 18" />
+        </svg>
+      </button>
+    </div>
+
+    <div
+      class="chat-messages"
+      id="chatMessages"
+      role="log"
+      aria-live="polite"
+      aria-relevant="additions"
+    ></div>
+
+    <div class="quick-replies" id="quickReplies" aria-label="Suggested replies"></div>
+
+    <form class="chat-composer" id="chatComposer" autocomplete="off">
+      <button
+        type="button"
+        class="composer-mic"
+        id="micBtn"
+        aria-label="Use microphone"
+      >
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M12 14a3 3 0 0 0 3-3V6a3 3 0 0 0-6 0v5a3 3 0 0 0 3 3Z" />
+          <path d="M19 11a7 7 0 0 1-14 0M12 18v3" />
+        </svg>
+      </button>
+      <input
+        class="composer-input"
+        id="chatInput"
+        type="text"
+        inputmode="text"
+        placeholder="Ask me anything…"
+        aria-label="Type a message"
+      />
+      <button type="submit" class="composer-send" id="sendBtn" aria-label="Send message">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M4 12l16-8-6 16-3-7-7-1Z" />
+        </svg>
+      </button>
+    </form>
+
+    <p class="chat-disclaimer">
+      <span aria-hidden="true">✨</span> AI-generated · responses may be
+      inaccurate. Verify important details.
+    </p>
+  </section>
+
+  <div class="chat-scrim" id="chatScrim" hidden></div>
+
+  <script src="checkout.js"></script>
+  <script src="script.js"></script>
+</body>
+</html>
