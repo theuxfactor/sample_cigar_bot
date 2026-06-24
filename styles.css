@@ -234,12 +234,14 @@ body.chat-open .chat-fab {
 /* ---- Mobile: full-screen sheet ---- */
 @media (max-width: 600px) {
   .chat-widget {
-    top: 0;
-    left: 0;
-    right: 0;
+    top: var(--app-top, 0px);
+    left: var(--app-left, 0px);
+    right: auto;
     bottom: auto;
     /* JS overrides --app-h to track the on-screen keyboard (visualViewport) */
+    width: var(--app-w, 100vw);
     height: var(--app-h, 100dvh);
+    min-height: var(--app-h, 100dvh);
     transform: translateY(100%);
     transition: transform 0.32s cubic-bezier(0.32, 0.72, 0, 1),
       visibility 0.32s;

@@ -810,8 +810,36 @@
 
   // Track the on-screen keyboard so the composer stays visible (iOS/Android).
   function syncViewportHeight() {
-    if (!isMobile() || !window.visualViewport) return;
-    widget.style.setProperty("--app-h", window.visualViewport.height + "px");
+    if (!isMobile()) return;
+
+    const vv = window.visualViewport;
+    const layoutHeight = window.innerHeight || document.documentElement.clientHeight;
+    const layoutWidth = window.innerWidth || document.documentElement.clientWidth;
+    const activeInChat = widget.contains(document.activeElement);
+
+    let top = 0;
+    let left = 0;
+    let width = layoutWidth;
+    let height = layoutHeight;
+
+    if (vv) {
+      const keyboardOffset = Math.max(0, layoutHeight - vv.height - vv.offsetTop);
+      const keyboardOpen = keyboardOffset > 80 || (activeInChat && vv.height < layoutHeight - 80);
+
+      if (keyboardOpen) {
+        top = vv.offsetTop || 0;
+        left = vv.offsetLeft || 0;
+        width = vv.width || layoutWidth;
+        // Keep enough room for messages + composer if Safari reports a tiny
+        // transient viewport while the keyboard animation is settling.
+        height = Math.max(vv.height, Math.min(layoutHeight, 360));
+      }
+    }
+
+    widget.style.setProperty("--app-top", top + "px");
+    widget.style.setProperty("--app-left", left + "px");
+    widget.style.setProperty("--app-w", width + "px");
+    widget.style.setProperty("--app-h", height + "px");
     scrollToBottom();
   }
   if (window.visualViewport) {
@@ -871,6 +899,9 @@
     document.body.classList.remove("chat-open");
     unlockScroll();
     widget.style.removeProperty("--app-h");
+    widget.style.removeProperty("--app-w");
+    widget.style.removeProperty("--app-top");
+    widget.style.removeProperty("--app-left");
     scrim.classList.remove("is-visible");
     setTimeout(() => {
       scrim.hidden = true;
@@ -963,6 +994,14 @@
     sendBtn.disabled = input.value.trim().length === 0;
   }
   input.addEventListener("input", updateSendState);
+  input.addEventListener("focus", () => {
+    syncViewportHeight();
+    setTimeout(syncViewportHeight, 120);
+    setTimeout(syncViewportHeight, 320);
+  });
+  input.addEventListener("blur", () => {
+    setTimeout(syncViewportHeight, 120);
+  });
   updateSendState();
 
   // Resume any in-progress conversation saved from a previous page.
