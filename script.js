@@ -834,6 +834,9 @@
         // transient viewport while the keyboard animation is settling.
         height = Math.max(vv.height, Math.min(layoutHeight, 360));
       }
+
+      // Float the composer above the keyboard (Google "Ask anything" style).
+      widget.classList.toggle("kb-open", keyboardOpen);
     }
 
     widget.style.setProperty("--app-top", top + "px");
@@ -898,6 +901,7 @@
     fab.setAttribute("aria-expanded", "false");
     document.body.classList.remove("chat-open");
     unlockScroll();
+    widget.classList.remove("kb-open");
     widget.style.removeProperty("--app-h");
     widget.style.removeProperty("--app-w");
     widget.style.removeProperty("--app-top");
