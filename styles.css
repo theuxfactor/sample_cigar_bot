@@ -375,6 +375,37 @@ body.chat-locked {
     box-shadow: 0 0 0 0 rgba(87, 201, 122, 0);
   }
 }
+.chat-header__new {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 36px;
+  padding: 0 12px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--text-dim);
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+.chat-header__new:hover {
+  background: var(--surface-2);
+  color: var(--text);
+  border-color: rgba(199, 154, 82, 0.45);
+}
+.chat-header__new svg {
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.5;
+  stroke-linecap: round;
+}
 .chat-header__close {
   width: 40px;
   height: 40px;
