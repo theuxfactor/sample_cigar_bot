@@ -153,15 +153,35 @@
         "Wonderful — let's find your perfect smoke.\n\nFirst, how bold do you like it?",
       ],
       replies: [
-        { label: "Mild & easy", set: ["strength", "mild"], next: "flavor" },
-        { label: "Medium", set: ["strength", "medium"], next: "flavor" },
-        { label: "Full & bold", set: ["strength", "full"], next: "flavor" },
-        { label: "Not sure 🤷", set: ["strength", "medium"], next: "flavor" },
+        {
+          label: "Mild & easy",
+          set: ["strength", "mild"],
+          next: "flavor",
+          ack: "Nice — mild is easy to enjoy.",
+        },
+        {
+          label: "Medium",
+          set: ["strength", "medium"],
+          next: "flavor",
+          ack: "Balanced — good call.",
+        },
+        {
+          label: "Full & bold",
+          set: ["strength", "full"],
+          next: "flavor",
+          ack: "Bold — you'll get plenty of character.",
+        },
+        {
+          label: "Not sure 🤷",
+          set: ["strength", "medium"],
+          next: "flavor",
+          ack: "No problem — we'll start with a balanced medium strength.",
+        },
       ],
     },
 
     flavor: {
-      messages: ["Great choice. Which flavor profile speaks to you?"],
+      messages: ["Which flavor profile speaks to you?"],
       replies: [
         { label: "🍫 Rich & earthy", set: ["flavor", "earthy"], next: "budget" },
         { label: "🥛 Creamy & smooth", set: ["flavor", "creamy"], next: "budget" },
@@ -453,7 +473,7 @@
     currentStep = "recommend";
   }
 
-  function handleReply(reply) {
+  async function handleReply(reply) {
     haptic(8);
     // Echo the user's choice as a message
     addMessage(reply.label, "user");
@@ -474,6 +494,13 @@
       // Hand off to a real page (e.g. secure checkout)
       window.location.href = reply.url;
       return;
+    }
+    if (reply.ack) {
+      showTyping();
+      await delay(450 + Math.min(reply.ack.length * 9, 800));
+      hideTyping();
+      addMessage(reply.ack, "bot");
+      await delay(180);
     }
     if (reply.next) {
       runStep(reply.next);
