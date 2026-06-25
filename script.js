@@ -808,47 +808,61 @@
     }
   }
 
-  // Track the on-screen keyboard so the composer stays visible (iOS/Android).
-  function syncViewportHeight() {
-    if (!isMobile()) return;
+  // Glue the widget to the *visual* viewport. On iOS the keyboard doesn't
+  // resize the layout viewport — it shrinks/scrolls the visual viewport — so a
+  // plain position:fixed sheet ends up anchored above the visible area. We
+  // mirror visualViewport's rect (offset + size) onto the widget instead.
+  let vpRaf = 0;
 
-    const vv = window.visualViewport;
-    const layoutHeight = window.innerHeight || document.documentElement.clientHeight;
-    const layoutWidth = window.innerWidth || document.documentElement.clientWidth;
-    const activeInChat = widget.contains(document.activeElement);
-
-    let top = 0;
-    let left = 0;
-    let width = layoutWidth;
-    let height = layoutHeight;
-
-    if (vv) {
-      const keyboardOffset = Math.max(0, layoutHeight - vv.height - vv.offsetTop);
-      const keyboardOpen = keyboardOffset > 80 || (activeInChat && vv.height < layoutHeight - 80);
-
-      if (keyboardOpen) {
-        top = vv.offsetTop || 0;
-        left = vv.offsetLeft || 0;
-        width = vv.width || layoutWidth;
-        // Keep enough room for messages + composer if Safari reports a tiny
-        // transient viewport while the keyboard animation is settling.
-        height = Math.max(vv.height, Math.min(layoutHeight, 360));
-      }
-
-      // Float the composer above the keyboard (Google "Ask anything" style).
-      widget.classList.toggle("kb-open", keyboardOpen);
+  function applyViewport() {
+    if (!isMobile()) {
+      widget.classList.remove("kb-open");
+      return;
     }
+    const vv = window.visualViewport;
+    if (!vv) return;
 
-    widget.style.setProperty("--app-top", top + "px");
-    widget.style.setProperty("--app-left", left + "px");
-    widget.style.setProperty("--app-w", width + "px");
-    widget.style.setProperty("--app-h", height + "px");
+    const layoutHeight =
+      window.innerHeight || document.documentElement.clientHeight;
+
+    widget.style.setProperty("--app-top", (vv.offsetTop || 0) + "px");
+    widget.style.setProperty("--app-left", (vv.offsetLeft || 0) + "px");
+    widget.style.setProperty("--app-w", (vv.width || window.innerWidth) + "px");
+    widget.style.setProperty("--app-h", vv.height + "px");
+
+    // Keyboard is up when the visible area is meaningfully shorter than layout
+    // and the focus is inside the chat — float the composer in that case.
+    const keyboardOpen =
+      widget.contains(document.activeElement) && layoutHeight - vv.height > 120;
+    widget.classList.toggle("kb-open", keyboardOpen);
+  }
+
+  function syncViewportHeight() {
+    applyViewport();
     scrollToBottom();
   }
+
+  // iOS emits viewport events erratically during the keyboard animation, so we
+  // also poll on requestAnimationFrame while the field is focused.
+  function viewportLoop() {
+    applyViewport();
+    vpRaf = requestAnimationFrame(viewportLoop);
+  }
+  function startViewportLoop() {
+    if (vpRaf) return;
+    vpRaf = requestAnimationFrame(viewportLoop);
+  }
+  function stopViewportLoop() {
+    if (!vpRaf) return;
+    cancelAnimationFrame(vpRaf);
+    vpRaf = 0;
+  }
+
   if (window.visualViewport) {
     window.visualViewport.addEventListener("resize", syncViewportHeight);
     window.visualViewport.addEventListener("scroll", syncViewportHeight);
   }
+  window.addEventListener("resize", syncViewportHeight);
 
   // Lock background scroll without losing position (robust on iOS Safari).
   // Only on mobile — the desktop floating card shouldn't shift the page.
@@ -901,6 +915,7 @@
     fab.setAttribute("aria-expanded", "false");
     document.body.classList.remove("chat-open");
     unlockScroll();
+    stopViewportLoop();
     widget.classList.remove("kb-open");
     widget.style.removeProperty("--app-h");
     widget.style.removeProperty("--app-w");
@@ -999,12 +1014,15 @@
   }
   input.addEventListener("input", updateSendState);
   input.addEventListener("focus", () => {
+    startViewportLoop();
     syncViewportHeight();
-    setTimeout(syncViewportHeight, 120);
-    setTimeout(syncViewportHeight, 320);
   });
   input.addEventListener("blur", () => {
-    setTimeout(syncViewportHeight, 120);
+    // Let the keyboard finish sliding away, then settle and stop polling.
+    setTimeout(() => {
+      stopViewportLoop();
+      syncViewportHeight();
+    }, 350);
   });
   updateSendState();
 
