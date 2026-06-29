@@ -32,7 +32,7 @@
      Keeps the transcript across page navigation (e.g. into checkout)
      so re-opening the bot resumes instead of restarting the greeting. */
   const SESSION_KEY = "emberChatSession";
-  let transcript = []; // [{kind:'msg',who,text} | {kind:'card',cigar}]
+  let transcript = []; // [{kind:'msg',who,text} | {kind:'card',cigar} | {kind:'video',video}]
   let currentReplies = []; // active quick replies (serializable)
   let restoring = false; // suppress persistence while rebuilding
 
@@ -135,6 +135,11 @@
      Each step: bot prompt(s) + optional quick replies.
      Quick reply -> { label, value, next, set:{key} }
      ============================================================ */
+  const CIGAR_CRAFT_VIDEO = {
+    id: "DY3UEAFd6YE",
+    title: "How cigars are made",
+  };
+
   const FLOW = {
     greeting: {
       messages: [
@@ -143,6 +148,7 @@
       ],
       replies: [
         { label: "🔎 Find me a great cigar", next: "strength" },
+        { label: "🎬 How cigars are made", next: "cigarCraft" },
         { label: "🎁 Shop a gift", next: "gift" },
         { label: "🕐 Store hours", next: "hours" },
       ],
@@ -235,6 +241,18 @@
       ],
       replies: [
         { label: "🔎 Find me a cigar", next: "strength" },
+      ],
+    },
+
+    cigarCraft: {
+      messages: [
+        "Great question — here's a look at how premium cigars come together, from leaf selection to the final roll.",
+      ],
+      special: "video",
+      video: CIGAR_CRAFT_VIDEO,
+      replies: [
+        { label: "🔎 Find me a great cigar", next: "strength" },
+        { label: "🎁 Shop a gift", next: "gift" },
       ],
     },
 
@@ -345,6 +363,40 @@
     }
   }
 
+  function renderVideoEmbed(video, record) {
+    const card = document.createElement("div");
+    card.className = "video-embed";
+
+    const title = document.createElement("p");
+    title.className = "video-embed__title";
+    title.textContent = video.title;
+
+    const frameWrap = document.createElement("div");
+    frameWrap.className = "video-embed__frame";
+
+    const iframe = document.createElement("iframe");
+    iframe.src =
+      "https://www.youtube.com/embed/" + video.id + "?rel=0&playsinline=1";
+    iframe.title = video.title;
+    iframe.setAttribute(
+      "allow",
+      "accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+    );
+    iframe.allowFullscreen = true;
+    iframe.loading = "lazy";
+
+    frameWrap.appendChild(iframe);
+    card.appendChild(title);
+    card.appendChild(frameWrap);
+    messagesEl.appendChild(card);
+    scrollToBottom();
+
+    if (record !== false) {
+      transcript.push({ kind: "video", video: video });
+      persist();
+    }
+  }
+
   // Rebuild a saved conversation from sessionStorage (no typing animation).
   function restoreSession() {
     let data = null;
@@ -359,6 +411,7 @@
     data.transcript.forEach((item) => {
       if (item.kind === "msg") addMessage(item.text, item.who, false);
       else if (item.kind === "card") renderCigarCard(item.cigar, false);
+      else if (item.kind === "video") renderVideoEmbed(item.video, false);
     });
 
     started = !!data.started;
@@ -424,6 +477,11 @@
       return;
     }
 
+    if (step.special === "video") {
+      await runVideo(step);
+      return;
+    }
+
     for (const msg of step.messages) {
       showTyping();
       await delay(650 + Math.min(msg.length * 12, 900));
@@ -471,6 +529,21 @@
       { label: "🔄 Show another", next: "strength", reset: true },
     ]);
     currentStep = "recommend";
+  }
+
+  async function runVideo(step) {
+    for (const msg of step.messages) {
+      showTyping();
+      await delay(650 + Math.min(msg.length * 12, 900));
+      hideTyping();
+      addMessage(msg, "bot");
+      await delay(180);
+    }
+
+    await delay(250);
+    renderVideoEmbed(step.video);
+    await delay(200);
+    renderQuickReplies(step.replies);
   }
 
   async function handleReply(reply) {
@@ -771,6 +844,14 @@
       runStep("hours");
       return;
     }
+    if (
+      /(how (are |is )?cigar|cigar(s)? (are |is )?made|making cigar|craft(ed|ing)? cigar|rolled|rolling cigar|torcedor|watch.*video)/.test(
+        t
+      )
+    ) {
+      runStep("cigarCraft");
+      return;
+    }
     if (/(gift|present|birthday|anniversary)/.test(t)) {
       runStep("gift");
       return;
@@ -826,6 +907,14 @@
      Mobile helpers: haptics, keyboard tracking, scroll lock
      ============================================================ */
   const isMobile = () => window.matchMedia("(max-width: 600px)").matches;
+  // A short, wide screen — i.e. a phone held in landscape. It's wider than the
+  // 600px breakpoint but too short for the corner card, so it gets the
+  // full-height side panel and the same keyboard tracking as the mobile sheet.
+  const isLandscapePanel = () =>
+    window.matchMedia("(orientation: landscape) and (max-height: 500px)")
+      .matches;
+  // Layouts that pin to the visual viewport and track the on-screen keyboard.
+  const isCompact = () => isMobile() || isLandscapePanel();
 
   function haptic(pattern) {
     if ("vibrate" in navigator) {
@@ -842,7 +931,7 @@
   let vpRaf = 0;
 
   function applyViewport() {
-    if (!isMobile()) {
+    if (!isCompact()) {
       widget.classList.remove("kb-open");
       return;
     }
@@ -892,11 +981,12 @@
   window.addEventListener("resize", syncViewportHeight);
 
   // Lock background scroll without losing position (robust on iOS Safari).
-  // Only on mobile — the desktop floating card shouldn't shift the page.
+  // Compact layouts (mobile sheet + landscape panel) only — the desktop
+  // floating card shouldn't shift the page.
   let savedScrollY = 0;
   let scrollLocked = false;
   function lockScroll() {
-    if (!isMobile() || scrollLocked) return;
+    if (!isCompact() || scrollLocked) return;
     savedScrollY = window.scrollY || window.pageYOffset || 0;
     document.body.style.top = -savedScrollY + "px";
     document.body.classList.add("chat-locked");
