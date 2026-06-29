@@ -273,31 +273,29 @@ body.chat-open .chat-fab {
   }
 }
 
-/* ---- Landscape phone: full-height right-side panel ----
+/* ---- Landscape phone: full-screen sheet ----
    A landscape phone is wider than 600px (so it would otherwise get the tiny
-   desktop card), but very short. Dock a full-height panel to the right edge
-   and tighten the chrome so the conversation still has room. Placed after the
-   desktop rules so it wins via source order for matching screens. */
+   desktop card), but very short. Take over the whole screen like the portrait
+   sheet, and tighten the chrome so the conversation still has room. Placed
+   after the desktop rules so it wins via source order for matching screens. */
 @media (orientation: landscape) and (max-height: 500px) {
   .chat-widget {
     top: var(--app-top, 0px);
-    left: auto;
-    right: 0;
+    left: var(--app-left, 0px);
+    right: auto;
     bottom: auto;
-    width: min(440px, 52vw);
+    width: var(--app-w, 100vw);
     height: var(--app-h, 100dvh);
     min-height: var(--app-h, 100dvh);
     border: none;
-    border-left: 1px solid var(--line);
     border-radius: 0;
-    box-shadow: var(--shadow-lg);
+    box-shadow: none;
     opacity: 1;
-    transform: translateX(100%);
-    transform-origin: right center;
+    transform: translateY(100%);
     transition: transform 0.3s cubic-bezier(0.32, 0.72, 0, 1), visibility 0.3s;
   }
   .chat-widget.is-open {
-    transform: translateX(0);
+    transform: translateY(0);
   }
 
   /* Reclaim vertical space from the chrome */
