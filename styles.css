@@ -860,6 +860,28 @@ body.chat-locked {
   }
 }
 
+/* Landscape quick-replies — placed after base .quick-replies so these rules
+   win in the cascade. Column + flex-wrap:wrap creates extra side columns
+   when the panel runs out of height, which is why chips appeared horizontal. */
+@media (orientation: landscape) and (max-height: 500px) {
+  .chat-widget .quick-replies {
+    display: flex;
+    flex-direction: column;
+    flex-wrap: nowrap;
+    align-items: stretch;
+    align-content: flex-start;
+    overflow-x: hidden;
+    overflow-y: auto;
+  }
+  .chat-widget .qr-chip {
+    width: 100%;
+    max-width: 100%;
+    flex: 0 0 auto;
+    box-sizing: border-box;
+    align-self: stretch;
+  }
+}
+
 /* ---- Composer ---- */
 .chat-composer {
   display: flex;
