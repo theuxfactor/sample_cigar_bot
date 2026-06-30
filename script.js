@@ -32,7 +32,7 @@
      Keeps the transcript across page navigation (e.g. into checkout)
      so re-opening the bot resumes instead of restarting the greeting. */
   const SESSION_KEY = "emberChatSession";
-  let transcript = []; // [{kind:'msg',who,text} | {kind:'card',cigar} | {kind:'video',video}]
+  let transcript = []; // [{kind:'msg'} | {kind:'card'} | {kind:'video'} | {kind:'map'}]
   let currentReplies = []; // active quick replies (serializable)
   let restoring = false; // suppress persistence while rebuilding
 
@@ -140,6 +140,11 @@
     title: "How cigars are made",
   };
 
+  const STORE_LOCATION = {
+    name: "Ember & Oak",
+    address: "142 Oak Street, Downtown",
+  };
+
   const FLOW = {
     greeting: {
       messages: [
@@ -237,8 +242,10 @@
 
     hours: {
       messages: [
-        "Our lounge & humidor are open:\n\n🕐 Mon–Thu · 11am – 10pm\n🕐 Fri–Sat · 11am – 1am\n🕐 Sun · 12pm – 8pm\n\n📍 142 Oak Street, Downtown",
+        "Our lounge & humidor are open:\n\n🕐 Mon–Thu · 11am – 10pm\n🕐 Fri–Sat · 11am – 1am\n🕐 Sun · 12pm – 8pm",
       ],
+      special: "map",
+      map: STORE_LOCATION,
       replies: [
         { label: "🔎 Find me a cigar", next: "strength" },
       ],
@@ -397,6 +404,53 @@
     }
   }
 
+  function renderMapEmbed(location, record) {
+    const card = document.createElement("div");
+    card.className = "map-embed";
+
+    const title = document.createElement("p");
+    title.className = "map-embed__title";
+    title.textContent = location.name;
+
+    const address = document.createElement("p");
+    address.className = "map-embed__address";
+    address.textContent = "📍 " + location.address;
+
+    const frameWrap = document.createElement("div");
+    frameWrap.className = "map-embed__frame";
+
+    const iframe = document.createElement("iframe");
+    iframe.src =
+      "https://maps.google.com/maps?q=" +
+      encodeURIComponent(location.address) +
+      "&z=15&output=embed";
+    iframe.title = "Map to " + location.name;
+    iframe.loading = "lazy";
+    iframe.referrerPolicy = "no-referrer-when-downgrade";
+
+    const directions = document.createElement("a");
+    directions.className = "map-embed__directions";
+    directions.href =
+      "https://www.google.com/maps/dir/?api=1&destination=" +
+      encodeURIComponent(location.address);
+    directions.target = "_blank";
+    directions.rel = "noopener noreferrer";
+    directions.textContent = "Get directions";
+
+    frameWrap.appendChild(iframe);
+    card.appendChild(title);
+    card.appendChild(address);
+    card.appendChild(frameWrap);
+    card.appendChild(directions);
+    messagesEl.appendChild(card);
+    scrollToBottom();
+
+    if (record !== false) {
+      transcript.push({ kind: "map", map: location });
+      persist();
+    }
+  }
+
   // Rebuild a saved conversation from sessionStorage (no typing animation).
   function restoreSession() {
     let data = null;
@@ -412,6 +466,7 @@
       if (item.kind === "msg") addMessage(item.text, item.who, false);
       else if (item.kind === "card") renderCigarCard(item.cigar, false);
       else if (item.kind === "video") renderVideoEmbed(item.video, false);
+      else if (item.kind === "map") renderMapEmbed(item.map, false);
     });
 
     started = !!data.started;
@@ -482,6 +537,11 @@
       return;
     }
 
+    if (step.special === "map") {
+      await runMap(step);
+      return;
+    }
+
     for (const msg of step.messages) {
       showTyping();
       await delay(650 + Math.min(msg.length * 12, 900));
@@ -542,6 +602,21 @@
 
     await delay(250);
     renderVideoEmbed(step.video);
+    await delay(200);
+    renderQuickReplies(step.replies);
+  }
+
+  async function runMap(step) {
+    for (const msg of step.messages) {
+      showTyping();
+      await delay(650 + Math.min(msg.length * 12, 900));
+      hideTyping();
+      addMessage(msg, "bot");
+      await delay(180);
+    }
+
+    await delay(250);
+    renderMapEmbed(step.map);
     await delay(200);
     renderQuickReplies(step.replies);
   }
